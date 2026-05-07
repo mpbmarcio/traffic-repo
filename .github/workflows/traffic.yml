@@ -1,0 +1,93 @@
+name: Collect Traffic Data from Multiple Repos
+
+on:
+  schedule:
+    - cron: '0 0 * * 0'   # roda todo domingo à meia-noite
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  collect-traffic:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout hub repo
+        uses: actions/checkout@v4
+
+      - name: Get traffic for challenge-forum-hub
+        uses: octokit/request-action@v3.x
+        id: challenge
+        with:
+          route: GET /repos/SeuUsuario/challenge-forum-hub/traffic/views
+        env:
+          GITHUB_TOKEN: ${{ secrets.TRAFFIC_TOKEN }}
+
+      - name: Save challenge-forum-hub traffic
+        run: |
+          FILE="logs/challenge-forum-hub-$(date +'%Y-%m-%d').txt"
+          mkdir -p logs
+          echo "Date: $(date)" >> $FILE
+          echo "Repo: challenge-forum-hub" >> $FILE
+          echo '${{ steps.challenge.outputs.data }}' | jq . >> $FILE
+          echo "" >> $FILE
+
+      - name: Get traffic for quarkus-kafka-payments
+        uses: octokit/request-action@v3.x
+        id: quarkus
+        with:
+          route: GET /repos/SeuUsuario/quarkus-kafka-payments/traffic/views
+        env:
+          GITHUB_TOKEN: ${{ secrets.TRAFFIC_TOKEN }}
+
+      - name: Save quarkus-kafka-payments traffic
+        run: |
+          FILE="logs/quarkus-kafka-payments-$(date +'%Y-%m-%d').txt"
+          mkdir -p logs
+          echo "Date: $(date)" >> $FILE
+          echo "Repo: quarkus-kafka-payments" >> $FILE
+          echo '${{ steps.quarkus.outputs.data }}' | jq . >> $FILE
+          echo "" >> $FILE
+
+      - name: Get traffic for events-api
+        uses: octokit/request-action@v3.x
+        id: events
+        with:
+          route: GET /repos/SeuUsuario/events-api/traffic/views
+        env:
+          GITHUB_TOKEN: ${{ secrets.TRAFFIC_TOKEN }}
+
+      - name: Save events-api traffic
+        run: |
+          FILE="logs/events-api-$(date +'%Y-%m-%d').txt"
+          mkdir -p logs
+          echo "Date: $(date)" >> $FILE
+          echo "Repo: events-api" >> $FILE
+          echo '${{ steps.events.outputs.data }}' | jq . >> $FILE
+          echo "" >> $FILE
+
+      - name: Get traffic for erp-mpb
+        uses: octokit/request-action@v3.x
+        id: erp
+        with:
+          route: GET /repos/SeuUsuario/erp-mpb/traffic/views
+        env:
+          GITHUB_TOKEN: ${{ secrets.TRAFFIC_TOKEN }}
+
+      - name: Save erp-mpb traffic
+        run: |
+          FILE="logs/erp-mpb-$(date +'%Y-%m-%d').txt"
+          mkdir -p logs
+          echo "Date: $(date)" >> $FILE
+          echo "Repo: erp-mpb" >> $FILE
+          echo '${{ steps.erp.outputs.data }}' | jq . >> $FILE
+          echo "" >> $FILE
+
+      - name: Commit traffic logs
+        run: |
+          git config --global user.name "github-actions"
+          git config --global user.email "github-actions@github.com"
+          git add logs/*.txt
+          git commit -m "Update traffic logs for $(date +'%Y-%m-%d')" || echo "No changes to commit"
+          git checkout -B traffic-data
+          git push origin traffic-data
