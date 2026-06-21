@@ -8,12 +8,19 @@ on:
 permissions:
   contents: write
 
+concurrency:
+  group: traffic-logs
+  cancel-in-progress: true
+
 jobs:
   collect-traffic:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout hub repo
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          ref: traffic-data   # já inicia na branch correta
 
       - name: Get traffic for challenge-forum-hub
         run: |
@@ -87,6 +94,7 @@ jobs:
         run: |
           git config --global user.name "github-actions"
           git config --global user.email "github-actions@github.com"
+          git pull origin traffic-data --rebase
           git add logs/*.txt
           git commit -m "Update traffic logs for $(date +'%Y-%m-%d')" || echo "No changes to commit"
-          git push origin HEAD:traffic-data
+          git push origin traffic-data
